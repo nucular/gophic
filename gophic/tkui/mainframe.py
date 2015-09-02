@@ -1,5 +1,7 @@
 from gophic.tkui.common import *
-import gophic.client
+from gophic.tkui.handlers import *
+from gophic.tkui.content import ContentWidget
+import asyncore
 import re
 
 class MainFrame(tk.Frame):
@@ -8,7 +10,14 @@ class MainFrame(tk.Frame):
   def __init__(self, master=None):
     """Initializes the main frame"""
     tk.Frame.__init__(self, master)
-    self.client = gophic.client.GopherClient()
+    self.client = gophic.Client(handlers=[
+      lambda c: GeneralHandler(c),
+      lambda c: DirectoryHandler(c) if c.location.type in "17" else None,
+      lambda c: GeneralHandler(c) if c.location.type == "0" else None,
+      lambda c: DownloadHandler(c) if c.location.type in "59" else None,
+      lambda c: WeblinkHandler(c) if c.location.path.startswith("URL:") else None,
+      lambda c: ImageHandler(c) if c.location.type in "gp" else None
+    ])
     self.pack()
 
   def setup(self):
@@ -16,9 +25,11 @@ class MainFrame(tk.Frame):
     self.location = tk.StringVar()
     self.setupNavFrame()
     self.setupContentFrame()
+    self.clientjob = gophic.tkui.root.after(100, self.pollClient)
 
   def teardown(self):
     """Destroys all widgets and quits the window"""
+    gophic.tkui.root.after_cancel(self.clientjob)
     try: # might already be gone
       self.destroy()
     except: pass
@@ -39,16 +50,23 @@ class MainFrame(tk.Frame):
 
     if ttk:
       def onComboboxSelected(event):
-        self.navigate(self.location.get())
+        i = self.addressbar.current()
+        history = self.client.history[:]
+        lookup = self.client.future + ["", self.client.location.tourl(), ""] + history
+        self.navigate(lookup[i])
         self.content.focus()
+
       self.addressbar = ttk.Combobox(self.navframe, textvariable=self.location)
-      self.addressbar.bind(onComboboxSelected)
+      self.addressbar.bind("<<ComboboxSelected>>", onComboboxSelected)
+
     else:
       self.addressbar = tk.Entry(self.navframe, textvariable=self.location)
+
     def onReturn(event):
       self.navigate(self.addressbar.get())
       self.content.focus()
     self.addressbar.bind("<Return>", onReturn)
+
     self.addressbar.pack(side="left", fill="x", expand=1)
 
     self.navframe.pack(side="top", fill="x", expand=0)
@@ -58,7 +76,7 @@ class MainFrame(tk.Frame):
     """Sets up the content widget and its scrollbar"""
     self.contentframe = tk.Frame()
 
-    self.content = tk.Text(self.contentframe)
+    self.content = ContentWidget(self, self.contentframe)
     self.content.grid_propagate(False)
     self.content.grid(row=1, column=0, sticky="nesw")
     self.contentframe.grid_rowconfigure(1, weight=1)
@@ -73,31 +91,40 @@ class MainFrame(tk.Frame):
   def updateNavBar(self):
     """Updates the history combobox"""
     if ttk:
-      rhistory = self.client.history[:]
-      rhistory.reverse()
-      self.addressbar["values"] = self.client.future \
-        + ["", self.client.location, ""]             \
-        + rhistory
+      history = [i.tourl() for i in self.client.history]
+      history.reverse()
+      future = [i.tourl() for i in self.client.future]
+      self.addressbar["values"] = future \
+        + ["", self.client.location.tourl(), ""] \
+        + history
       self.addressbar.current(len(self.client.future) + 1)
     else:
       self.location.set(self.client.location)
 
-  def navigate(self, url):
-    """Navigates to an URL"""
+  def navigate(self, url, force=False):
+    """Navigates to an URL or Link"""
     if url == "" or url == self.client.location:
       self.addressbar.current(len(self.client.future) + 1)
-      return
+      if not force:
+        return
 
-    url = self.client.navigate(url)
-    self.location.set(url)
+    # invalidates future
+    self.client.future = []
+    self.client.navigate(url, force)
     self.updateNavBar()
 
   def navigateBack(self, event=None):
     """Navigates to the last point in the client history"""
-    url = self.client.navigateBack()
+    self.client.navigateBack()
     self.updateNavBar()
 
   def navigateForward(self, event=None):
     """Navigates to the last point in the client future"""
-    url = self.client.navigateForward()
+    self.client.navigateForward()
     self.updateNavBar()
+
+  def pollClient(self):
+    """Polls the client for new data."""
+    if self.client.socket:
+      asyncore.loop(0.1, count=1)
+    self.clientjob = gophic.tkui.root.after(100, self.pollClient)

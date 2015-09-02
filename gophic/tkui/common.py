@@ -14,6 +14,10 @@ except ImportError: import tkinter.tix as tix
 # message boxes
 try: import tkMessageBox as msgbox
 except ImportError: import tkinter.messagebox as msgbox
+try: import tkFileDialog as filedialog
+except ImportError: import tkinter.filedialog as filedialog
+try: import tkSimpleDialog as simpledialog
+except ImportError: import tkinter.simpledialog as simpledialog
 
 # Tkfont
 try: import tkFont as tkfont
