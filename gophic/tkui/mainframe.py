@@ -40,18 +40,34 @@ class MainFrame(tk.Frame):
 
     self.backbutton = tk.Button(self.navframe)
     self.backbutton.bind("<Button-1>", self.navigateBack)
-    self.backbutton["text"] = "<"
+    self.backbutton.icon = tk.PhotoImage(file="icons/go-previous.gif")
+    self.backbutton.config(image=self.backbutton.icon, state="disabled")
     self.backbutton.pack(side="left")
+
     self.forwardbutton = tk.Button(self.navframe)
-    self.forwardbutton["text"] = ">"
+    self.forwardbutton.icon = tk.PhotoImage(file="icons/go-next.gif")
+    self.forwardbutton.config(image=self.forwardbutton.icon, state="disabled")
     self.forwardbutton.bind("<Button-1>", self.navigateForward)
     self.forwardbutton.pack(side="left")
+
+    def onReload(e):
+      if self.client.connected:
+        self.client.close()
+      else:
+        self.client.connect()
+
+    self.reloadbutton = tk.Button(self.navframe)
+    self.reloadbutton.reloadicon = tk.PhotoImage(file="icons/view-refresh.gif")
+    self.reloadbutton.stopicon = tk.PhotoImage(file="icons/process-stop.gif")
+    self.reloadbutton.bind("<Button-1>", onReload)
+    self.reloadbutton.config(image=self.reloadbutton.reloadicon)
+    self.reloadbutton.pack(side="left")
 
     if ttk:
       def onComboboxSelected(event):
         i = self.addressbar.current()
         history = self.client.history[:]
-        lookup = self.client.future + ["", self.client.location.tourl(), ""] + history
+        lookup = self.client.future + ["", self.client.location, ""] + history
         self.navigate(lookup[i])
         self.content.focus()
 
@@ -97,6 +113,11 @@ class MainFrame(tk.Frame):
         + ["", self.client.location.tostring(), ""] \
         + history
       self.addressbar.current(len(self.client.future) + 1)
+
+      if len(history) > 0: self.backbutton.config(state="default")
+      else: self.backbutton.config(state="disabled")
+      if len(future) > 0: self.forwardbutton.config(state="default")
+      else: self.forwardbutton.config(state="disabled")
     else:
       self.location.set(self.client.location)
 
@@ -126,4 +147,8 @@ class MainFrame(tk.Frame):
     """Polls the client for new data."""
     if self.client.socket:
       asyncore.loop(0.1, count=1)
+    if self.client.connected:
+      self.reloadbutton.configure(image=self.reloadbutton.stopicon)
+    else:
+      self.reloadbutton.configure(image=self.reloadbutton.reloadicon)
     self.clientjob = gophic.tkui.root.after(100, self.pollClient)

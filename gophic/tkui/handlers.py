@@ -42,6 +42,9 @@ class DownloadHandler(GeneralHandler):
       initialfile=self.client.location.path.split("/")[-1],
       title="Save binary file as..."
     )
+    if not self.file:
+      self.client.close()
+      return
     self.lastsize = 0
     self.content.insert("1.0", "Downloading...\r\n")
 
@@ -65,9 +68,9 @@ class DownloadHandler(GeneralHandler):
     pass
 
   def onClose(self):
-    self.file.flush()
-    self.file.close()
-    gophic.tkui.main.navigateBack()
+    # onRead could still be fired and the file is released on GC anyway
+    #self.file.close()
+    self.content.insert("insert", "Done")
 
 class ImageHandler(GeneralHandler):
   def onConnect(self):
