@@ -15,7 +15,6 @@ class MainFrame(tk.Frame):
       lambda c: DirectoryHandler(c) if c.location.type in "17" else None,
       lambda c: GeneralHandler(c) if c.location.type == "0" else None,
       lambda c: DownloadHandler(c) if c.location.type in "59" else None,
-      lambda c: WeblinkHandler(c) if c.location.path.startswith("URL:") else None,
       lambda c: ImageHandler(c) if c.location.type in "gp" else None
     ])
     self.pack()
@@ -91,18 +90,18 @@ class MainFrame(tk.Frame):
   def updateNavBar(self):
     """Updates the history combobox"""
     if ttk:
-      history = [i.tourl() for i in self.client.history]
+      history = [i.tostring() for i in self.client.history]
       history.reverse()
-      future = [i.tourl() for i in self.client.future]
+      future = [i.tostring() for i in self.client.future]
       self.addressbar["values"] = future \
-        + ["", self.client.location.tourl(), ""] \
+        + ["", self.client.location.tostring(), ""] \
         + history
       self.addressbar.current(len(self.client.future) + 1)
     else:
       self.location.set(self.client.location)
 
   def navigate(self, url, force=False):
-    """Navigates to an URL or Link"""
+    """Navigates to an URL"""
     if url == "" or url == self.client.location:
       self.addressbar.current(len(self.client.future) + 1)
       if not force:

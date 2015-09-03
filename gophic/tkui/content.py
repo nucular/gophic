@@ -1,4 +1,5 @@
 from gophic.tkui.common import *
+import webbrowser
 
 class ContentWidget(tk.Text):
   def __init__(self, main, *args, **kwargs):
@@ -14,8 +15,8 @@ class ContentWidget(tk.Text):
           self.links[tag](e)
 
     self.tag_config("link", foreground="blue", underline=1)
-    self.tag_bind("link", "Enter>", lambda e: self.config(cursor="hand"))
-    self.tag_bind("link", "Leave>", lambda e: self.config(cursor=""))
+    self.tag_bind("link", "<Enter>", lambda e: self.config(cursor="hand2"))
+    self.tag_bind("link", "<Leave>", lambda e: self.config(cursor="xterm"))
     self.tag_bind("link", "<Button-1>", onLinkClick)
 
     self.tag_config("error", foreground="red")
@@ -23,16 +24,18 @@ class ContentWidget(tk.Text):
   def resetLinks(self):
     self.links = {}
 
-  def link(self, link, search=False):
+  def link(self, url, search=False):
     def callback(e):
       if search:
         query = simpledialog.askstring("Search query", "Enter a search query string",
           parent=gophic.tkui.main)
         if query:
-          link.path += "?" + query
-          self.main.navigate(link, force=True)
+          url.query = query
+      if url.path.startswith("URL:"):
+        webbrowser.get().open(url.path[4:], autoraise=True)
       else:
-        self.main.navigate(link, force=True)
+        self.main.navigate(url, force=True)
+
     tag = "link-{}".format(len(self.links))
     self.links[tag] = callback
     return "link", tag

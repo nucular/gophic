@@ -1,5 +1,4 @@
 import gophic
-import gophic.about
 import sys, traceback
 from asyncore import dispatcher
 import socket
@@ -31,16 +30,16 @@ class Client(dispatcher):
   events to a list of handlers and keeping track of the navigation history.
   """
 
-  def __init__(self, type="1", link=None, handlers=[]):
-    """Initializes the client and navigates to a link if provided"""
+  def __init__(self, type="1", url=None, handlers=[]):
+    """Initializes the client and immediately navigates to an Url if provided"""
     dispatcher.__init__(self)
 
-    self.location = gophic.Link("about", path="blank")
+    self.location = gophic.Url("about", path="blank")
     self.history = []
     self.future = []
     self.handlers = handlers
-    if link:
-      self.location = link
+    if url:
+      self.location = url
       self.connect()
 
     self.inputbuffer = ""
@@ -69,8 +68,10 @@ class Client(dispatcher):
       self.handler.onConnect()
       page = self.location.path
       
-      if page in gophic.about.PAGES:
-        for line in gophic.about.PAGES[page]:
+      if page == "blank":
+        pass
+      if page == "gophic":
+        for line in gophic.__doc__.split("\n"):
           self.handler.onRead(line + "\r\n")
           self.handler.onLine(line + "\r\n")
       else:
@@ -81,22 +82,25 @@ class Client(dispatcher):
       return
 
     self.inputbuffer = ""
-    self.outputbuffer = self.location.path + "\r\n"
+    self.outputbuffer = self.location.path
+    if self.location.query:
+      self.outputbuffer += "?" + self.location.query
+    self.outputbuffer += "\r\n"
 
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
     dispatcher.connect(self, (self.location.host, self.location.port))
 
-  def navigate(self, link, force=False):
+  def navigate(self, url, force=False):
     """
-    Navigates to a link, pushing the current location to the history.
+    Navigates to an Url, pushing the current location to the history.
     Returns True if location changed.
     """
-    if type(link) == str:
-      link = gophic.Link.fromurl(link)
+    if type(url) == str:
+      url = gophic.Url.fromstring(url)
 
-    if force or self.location.tourl() != link.tourl():
+    if force or self.location.tostring() != url.tostring():
       self.history.append(self.location)
-      self.location = link
+      self.location = url
       self.connect()
       return True
     return False

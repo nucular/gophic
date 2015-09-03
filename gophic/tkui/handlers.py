@@ -18,18 +18,20 @@ class GeneralHandler(gophic.client.Handler):
 
 class DirectoryHandler(GeneralHandler):
   def onLine(self, line):
-    t = gophic.Link.fromline(line)
+    if len(line.split("\t")) < 4:
+      return
 
-    if t.type == ".":
+    url = gophic.Url.fromline(line)
+    if url.type == ".":
       self.client.close()
-    elif t.type == "i":
-      self.content.insert("end", t.name + "\r\n",)
-    elif t.type == "3":
-      self.content.insert("end", t.name + "\r\n", "error")
-    elif t.type == "7":
-      self.content.insert("end", t.name + "\r\n", self.content.link(t, search=True))
+    elif url.type == "i":
+      self.content.insert("end", url.name + "\n",)
+    elif url.type == "3":
+      self.content.insert("end", url.name + "\n", "error")
+    elif url.type == "7":
+      self.content.insert("end", url.name + "\n", self.content.link(url, search=True))
     else:
-      self.content.insert("end", t.name + "\r\n", self.content.link(t))
+      self.content.insert("end", url.name + "\n", self.content.link(url))
 
 class DownloadHandler(GeneralHandler):
   def onConnect(self):
@@ -66,17 +68,6 @@ class DownloadHandler(GeneralHandler):
     self.file.flush()
     self.file.close()
     gophic.tkui.main.navigateBack()
-
-class WeblinkHandler(GeneralHandler):
-  def onConnect(self):
-    GeneralHandler.onConnect(self)
-    url = self.client.location.path[4:]
-    webbrowser.get().open(url, autoraise=True)
-    self.content.insert("1.0", "Opened in browser")
-    self.client.close()
-
-  def onLine(self, line):
-    pass
 
 class ImageHandler(GeneralHandler):
   def onConnect(self):
