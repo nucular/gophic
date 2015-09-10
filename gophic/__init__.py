@@ -7,3 +7,4 @@ __version__ = "0.0.0"
 
 from gophic.url import Url
 from gophic.client import Client
+from gophic.resources import ResourceFactory, Resource

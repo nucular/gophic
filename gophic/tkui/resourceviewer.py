@@ -1,12 +1,14 @@
 from gophic.tkui.common import *
-import webbrowser
 
-class ContentWidget(tk.Text):
-  def __init__(self, main, *args, **kwargs):
-    """Registers all style tags and initializes the Content widget."""
-    tk.Text.__init__(self, *args, **kwargs)
-    self.main = main
+class ResourceViewer(tk.Text):
+  """Displays a Resource instance."""
+
+  def __init__(self, master, *args, **kwargs):
+    """Registers all style tags and initializes the widget."""
+    tk.Text.__init__(self, master, *args, **kwargs)
     self.links = {}
+    self.resource = None
+
     self.config(state="disabled")
 
     def onLinkClick(e):
@@ -21,20 +23,15 @@ class ContentWidget(tk.Text):
 
     self.tag_config("error", foreground="red")
 
-  def resetLinks(self):
-    self.links = {}
-
   def link(self, url, search=False):
+    """Register a link. Returns a tuple of text tags."""
     def callback(e):
       if search:
         query = simpledialog.askstring("Search query", "Enter a search query string",
           parent=gophic.tkui.main)
         if query:
           url.query = query
-      if url.path.startswith("URL:"):
-        webbrowser.get().open(url.path[4:], autoraise=True)
-      else:
-        self.main.navigate(url, force=True)
+      gophic.tkui.main.navigate(url, force=True)
 
     tag = "link-{}".format(len(self.links))
     self.links[tag] = callback
@@ -49,3 +46,10 @@ class ContentWidget(tk.Text):
     self.config(state="normal")
     tk.Text.delete(self, *args, **kwargs)
     self.config(state="disabled")
+
+  def render(self):
+    """Renders the current resource."""
+    self.delete(1.0, "end")
+    self.links = {}
+    if self.resource and hasattr(self.resource, "render"):
+      self.resource.render(self)

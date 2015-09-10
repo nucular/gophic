@@ -40,3 +40,7 @@ else:
 if not ttk is None:
   for name in ttk.__all__:
     setattr(tk, name, getattr(ttk, name))
+
+def log(*args, **kwargs):
+  if not gophic.tkui.NO_CONSOLE:
+    print(*args, **kwargs)

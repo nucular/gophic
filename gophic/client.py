@@ -1,91 +1,81 @@
 import gophic
-import sys, traceback
+import gophic.resources
 from asyncore import dispatcher
 import socket
-from abc import ABCMeta
-
-class Handler(object):
-  """Abstract base class that handles Connection events forwarded from a Client."""
-  __metaclass__ = ABCMeta
-
-  def onClose(self):
-    """Called when the client connection closed."""
-    pass
-
-  def onRead(self, chunk):
-    """Handles a chunk of data received from the connection"""
-    pass
-
-  def onLine(self, line):
-    """Handles a line of data received from the connection."""
-    pass
-
-  def onError(self, t, v, tb):
-    """Handles an exception that wasn't handled otherwise."""
-    traceback.print_tb(tb)
 
 class Client(dispatcher):
   """
   Provides a high-level backend for Gopher clients, dispatching Connection
-  events to a list of handlers and keeping track of the navigation history.
+  events to a resource and even keeping track of the navigation history.
   """
 
-  def __init__(self, type="1", url=None, handlers=[]):
+  def __init__(self, url=None, factory=None):
     """Initializes the client and immediately navigates to an Url if provided"""
     dispatcher.__init__(self)
 
     self.location = gophic.Url("about", path="blank")
     self.history = []
     self.future = []
-    self.handlers = handlers
+
     if url:
       self.location = url
       self.connect()
+    if factory:
+      self.factory = factory
+    else:
+      self.factory = gophic.ResourceFactory(
+        lambda c: gophic.resources.DirectoryResource(c) if c.location.type in "1" else None,
+        lambda c: gophic.resources.TextResource(c) if c.location.type in "07" else None,
+        lambda c: gophic.resource.Resource(c)
+      )
 
     self.inputbuffer = ""
     self.outputbuffer = ""
-    self.chunksize = 8192
+    self.chunksize = 1024
+    self.terminator = "\r\n"
 
-  def connect(self):
-    """Connects to the current location."""
-    if not self.location:
-      raise ValueError("Client has no location")
+  def connect(self, url=None):
+    """
+    Connects to the current location or an Url. Doesn't touch the navigation
+    history.
+    Returns the created Resource.
+    """
+    if url:
+      self.location = url
 
     if self.socket:
       self.close()
-      if self.handler:
-        self.handler.onClose()
+      if self.resource:
+        self.resource.onClose()
 
-    self.handler = None
-    for i in self.handlers:
-      r = i(self)
-      if r:
-        self.handler = r
-    if not self.handler:
-      raise NotImplementedError("No handler found for {}".format(self.location))
+    self.resource = self.factory.construct(self)
+
+    if self.resource.finished:
+      # instance doesn't need data so don't even connect
+      return self.resource
+
 
     if self.location.host == "about":
-      self.handler.onConnect()
+      self.resource.onConnect()
       page = self.location.path
       
       if page == "blank":
         pass
       if page == "gophic":
         for line in gophic.__doc__.split("\n"):
-          self.handler.onRead(line + "\r\n")
-          self.handler.onLine(line + "\r\n")
+          self.resource.onRead(line + self.terminator)
       else:
-        self.handler.onLine("3Error: about page not found\r\n")
+        self.resource.onRead("3Error: about page not found" + self.terminator)
 
-      self.handler.onLine(".")
-      self.handler.onClose()
+      self.resource.onRead("." + self.terminator)
+      self.resource.onClose()
       return
 
     self.inputbuffer = ""
     self.outputbuffer = self.location.path
     if self.location.query:
       self.outputbuffer += "?" + self.location.query
-    self.outputbuffer += "\r\n"
+    self.outputbuffer += self.terminator
 
     self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
     dispatcher.connect(self, (self.location.host, self.location.port))
@@ -93,6 +83,7 @@ class Client(dispatcher):
   def navigate(self, url, force=False):
     """
     Navigates to an Url, pushing the current location to the history.
+    Invalidates future.
     Returns True if location changed.
     """
     if type(url) == str:
@@ -100,6 +91,7 @@ class Client(dispatcher):
 
     if force or self.location.tostring() != url.tostring():
       self.history.append(self.location)
+      self.future = []
       self.location = url
       self.connect()
       return True
@@ -129,44 +121,51 @@ class Client(dispatcher):
       return True
     return False
 
+  def onConnect(self):
+    """Called when the client connected to a Gopher server."""
+    pass
+
+  def onRead(self, chunk):
+    """Called when the client received data for the Resource."""
+    pass
+
+  def onWritten(self, chunk):
+    """Called when the client sent data to the server."""
+
+  def onClose(self):
+    """Called when the connection of the client closed remotely."""
+    pass
+
+  def onError(self):
+    """Called when a socket error occured."""
+    pass
+
   def handle_connect(self):
-    """Calls onConnect."""
-    self.handler.onConnect()
+    """Calls onConnect on the resource."""
+    self.onConnect()
+    self.resource.onConnect()
 
   def handle_read(self):
-    """Reads a chunk, splits it into lines and calls onRead and onLine."""
-    print("Read")
+    """Reads a chunk and calls onRead on the resource."""
     chunk = self.recv(self.chunksize)
-    self.handler.onRead(chunk)
-    lines = chunk.splitlines(True)
-
-    for i in lines:
-      if type(i) != str:
-        try:
-          i = i.decode("utf-8")
-        except UnicodeError: continue
-
-      if i.endswith("\n"):
-        self.handler.onLine(self.inputbuffer + i)
-        self.inputbuffer = ""
-      else:
-        self.inputbuffer += i
+    self.onRead(chunk)
+    self.resource.onRead(chunk)
       
   def handle_write(self):
     """Writes buffered input to the socket."""
-    print("Write")
     if len(self.outputbuffer) > 0:
       sent = self.send(self.outputbuffer.encode("utf-8"))
-      self.outputbuffer = self.outputbuffer[:sent]
+      self.onWritten(self.outputbuffer[:sent])
+      self.outputbuffer = self.outputbuffer[sent:]
 
   def handle_error(self):
-    """Calls onError."""
+    """Closes the socket and calls onError on the resource."""
     self.close()
-    t, v, tb = sys.exc_info()
-    self.handler.onError(t, v, tb)
+    self.onError()
+    self.resource.onError()
   
   def handle_close(self):
-    """Calls onClose."""
-    print("Close")
-    self.handler.onClose()
+    """Flushes the socket and calls onClose on the resource."""
+    self.onClose()
+    self.resource.onClose()
     self.close()
