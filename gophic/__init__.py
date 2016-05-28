@@ -1,5 +1,5 @@
 """
-iGophic Client 0.0.0\t\thost.error\t70
+igophic Client 0.0.0\t\thost.error\t70
 hhttps://github.com/nucular/gophic\tURL:https://github.com/nucular/gophic\thost.error\t70
 """
 

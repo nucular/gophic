@@ -1,4 +1,4 @@
-from gophic.tkui.common import *
+from gophic.tk.common import *
 import webbrowser
 
 class TextResource(gophic.resources.TextResource):
@@ -29,7 +29,7 @@ class DownloadResource(gophic.resources.Resource):
     self.client = client
     self.file = filedialog.asksaveasfile(
       "wb",
-      parent=gophic.tkui.main,
+      parent=gophic.tk.main,
       initialfile=client.location.path.split("/")[-1],
       title="Save {} as...".format(client.location)
     )

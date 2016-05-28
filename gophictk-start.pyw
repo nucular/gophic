@@ -7,7 +7,7 @@ Here's the traceback:
 %s
 """
 
-from gophic.tkui.common import *
+from gophic.tk.common import *
 
 if __name__ == "__main__":
 
@@ -29,10 +29,10 @@ if __name__ == "__main__":
     sys.stderr.write("")
 
   try:
-    gophic.tkui.NO_CONSOLE = NO_CONSOLE
+    gophic.tk.NO_CONSOLE = NO_CONSOLE
 
-    gophic.tkui.setup()
-    gophic.tkui.run()
+    gophic.tk.setup()
+    gophic.tk.run()
 
   except Exception:
     tb = traceback.format_exc()
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     pass
 
   finally:
-    gophic.tkui.teardown()
+    gophic.tk.teardown()
 
     if NO_CONSOLE:
       if sys.stdout.tell() == 0:

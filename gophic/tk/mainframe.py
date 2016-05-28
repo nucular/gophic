@@ -1,12 +1,12 @@
-from gophic.tkui.common import *
-from gophic.tkui.resources import *
-from gophic.tkui.resourceviewer import ResourceViewer
-from gophic.tkui.client import Client
+from gophic.tk.common import *
+from gophic.tk.resources import *
+from gophic.tk.resourceviewer import ResourceViewer
+from gophic.tk.client import Client
 import asyncore
 import re
 
 class MainFrame(tk.Frame):
-  """Encapsulates the main window of the gophic GUI"""
+  """Encapsulates the main window of the gophic tk GUI"""
 
   def __init__(self, master=None):
     """Initializes the main frame"""
@@ -24,11 +24,11 @@ class MainFrame(tk.Frame):
     self.location = tk.StringVar()
     self.setupNavFrame()
     self.setupViewer()
-    self.clientjob = gophic.tkui.root.after(100, self.pollClient)
+    self.clientjob = gophic.tk.root.after(100, self.pollClient)
 
   def teardown(self):
     """Destroys all widgets and quits the window"""
-    gophic.tkui.root.after_cancel(self.clientjob)
+    gophic.tk.root.after_cancel(self.clientjob)
     try: # might already be gone
       self.destroy()
     except: pass
@@ -153,4 +153,4 @@ class MainFrame(tk.Frame):
       self.viewer.render()
     else:
       self.reloadbutton.configure(image=self.reloadbutton.reloadicon)
-    self.clientjob = gophic.tkui.root.after(100, self.pollClient)
+    self.clientjob = gophic.tk.root.after(100, self.pollClient)

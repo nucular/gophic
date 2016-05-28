@@ -1,4 +1,4 @@
-from gophic.tkui.common import *
+from gophic.tk.common import *
 
 class ResourceViewer(tk.Text):
   """Displays a Resource instance."""
@@ -28,10 +28,10 @@ class ResourceViewer(tk.Text):
     def callback(e):
       if search:
         query = simpledialog.askstring("Search query", "Enter a search query string",
-          parent=gophic.tkui.main)
+          parent=gophic.tk.main)
         if query:
           url.query = query
-      gophic.tkui.main.navigate(url, force=True)
+      gophic.tk.main.navigate(url, force=True)
 
     tag = "link-{}".format(len(self.links))
     self.links[tag] = callback

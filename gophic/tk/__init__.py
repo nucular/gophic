@@ -1,5 +1,5 @@
-from gophic.tkui.common import tk
-from gophic.tkui.mainframe import MainFrame
+from gophic.tk.common import tk
+from gophic.tk.mainframe import MainFrame
 
 NO_CONSOLE = False
 
@@ -14,7 +14,7 @@ def setup():
   main = MainFrame(root)
   main.setup()
 
-  root.wm_title("gophic")
+  root.wm_title("gophictk")
   root.protocol("WM_DELETE_WINDOW", teardown)
 
 def run():

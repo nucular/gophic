@@ -1,4 +1,4 @@
-from gophic.tkui.common import *
+from gophic.tk.common import *
 
 class Client(gophic.Client):
   """A Client that is connected to the Tk interface."""

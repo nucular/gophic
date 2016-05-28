@@ -1,5 +1,5 @@
 import gophic
-import gophic.tkui
+import gophic.tk
 import warnings
 import sys
 
@@ -42,5 +42,5 @@ if not ttk is None:
     setattr(tk, name, getattr(ttk, name))
 
 def log(*args, **kwargs):
-  if not gophic.tkui.NO_CONSOLE:
+  if not gophic.tk.NO_CONSOLE:
     print(*args, **kwargs)
